@@ -40,16 +40,94 @@ function getRandomStartups() {
   return [startupData[idx1], startupData[idx2]];
 }
 
+function formatBatch(batch) {
+  if (!batch) return 'N/A';
+  const parts = batch.split(' ');
+  if (parts.length === 2) {
+    const season = parts[0][0];
+    const year = parts[1].slice(-2);
+    return `${season}${year}`;
+  }
+  return batch;
+}
+
+function StartupLogo({ website, name }) {
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [website]);
+
+  if (!website) {
+    return (
+      <div className="startup-image-placeholder" style={{ fontSize: '0.9rem', padding: '1rem', textAlign: 'center' }}>
+        No Website Provided
+      </div>
+    );
+  }
+
+  let hostname = '';
+  try {
+    const urlString = website.startsWith('http') ? website : `https://${website}`;
+    hostname = new URL(urlString).hostname;
+  } catch (e) {
+    return (
+      <div className="startup-image-placeholder" style={{ fontSize: '0.9rem', padding: '1rem', textAlign: 'center' }}>
+        Invalid URL: {website}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="startup-image-placeholder" style={{ fontSize: '0.9rem', padding: '1rem', textAlign: 'center' }}>
+        Clearbit API Failed for: {hostname}
+      </div>
+    );
+  }
+
+  return (
+    <div className="startup-image-container">
+      <img 
+        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=128`} 
+        alt={`${name} logo`} 
+        className="startup-logo-img"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
 function Home({ handleVote }) {
   const [startups, setStartups] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
     setStartups(getRandomStartups());
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (startups.length !== 2 || selectedId !== null) return;
+      if (e.key === 'ArrowLeft') {
+        onSelect(startups[0]);
+      } else if (e.key === 'ArrowRight') {
+        onSelect(startups[1]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [startups, selectedId]);
+
   const onSelect = (startup) => {
+    if (selectedId !== null) return; // Prevent multiple votes
+    setSelectedId(startup.id);
     handleVote(startup);
-    setStartups(getRandomStartups());
+    
+    setTimeout(() => {
+      setStartups(getRandomStartups());
+      setSelectedId(null);
+    }, 400);
   };
 
   if (startups.length !== 2) return null;
@@ -57,40 +135,40 @@ function Home({ handleVote }) {
   return (
     <main className="main-content">
       <h1 className="prompt-text">
-        Who's Gonna Be The Bigger Company? Click to choose
+        Who's Gonna Be The Bigger Company? Arrow keys or click to choose
       </h1>
       
       <div className="facemash-container">
-        {startups.map((startup) => (
-          <div 
-            key={startup.id} 
-            className="startup-card"
-            onClick={() => onSelect(startup)}
-          >
-            <div className="startup-image-placeholder">
-              Image Not Available
+        {startups.map((startup, index) => (
+          <React.Fragment key={startup.id}>
+            <div 
+              className={`startup-card ${selectedId === startup.id ? 'selected' : ''}`}
+              onClick={() => onSelect(startup)}
+            >
+              <StartupLogo website={startup.website} name={startup.name} />
+              <h2 className="startup-name">
+                {startup.name} <span className="startup-batch">({formatBatch(startup.batch)})</span>
+              </h2>
+              <p className="startup-oneliner">
+                {startup.one_liner || 'No description available'}
+                {startup.website && (
+                  <>
+                    {' '}
+                    <a 
+                      href={startup.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="startup-website-link"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      [link]
+                    </a>
+                  </>
+                )}
+              </p>
             </div>
-            <h2 className="startup-name">
-              {startup.name} <span className="startup-batch">({startup.batch || 'N/A'})</span>
-            </h2>
-            <p className="startup-oneliner">
-              {startup.one_liner || 'No description available'}
-              {startup.website && (
-                <>
-                  {' '}
-                  <a 
-                    href={startup.website} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="startup-website-link"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    [link]
-                  </a>
-                </>
-              )}
-            </p>
-          </div>
+            {index === 0 && <div className="or-divider">OR</div>}
+          </React.Fragment>
         ))}
       </div>
     </main>
@@ -122,7 +200,7 @@ function Top100({ rankings }) {
                 <tr key={item.data.id}>
                   <td>#{index + 1}</td>
                   <td>{item.data.name}</td>
-                  <td>{item.data.batch || 'N/A'}</td>
+                  <td>{formatBatch(item.data.batch)}</td>
                   <td>{item.wins}</td>
                 </tr>
               ))}
