@@ -128,6 +128,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  position: relative;
 }
 
 .startup-card:hover {
@@ -135,12 +136,33 @@
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.startup-card.selected {
-  transform: scale(1.03);
-  box-shadow: 0 0 0 4px #4caf50, 0 8px 25px rgba(76, 175, 80, 0.3);
-  border-color: #4caf50;
-  background-color: #f1f8e9;
-  z-index: 10;
+.plus-one-animation {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 5rem;
+  font-weight: 800;
+  color: #4caf50;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+  pointer-events: none;
+  animation: floatUpFade 0.4s ease-out forwards;
+}
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(1);
+  }
 }
 
 .startup-image-container {

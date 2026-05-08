@@ -29,15 +29,27 @@ function Header() {
   );
 }
 
+const validStartups = startupData.filter(startup => {
+  if (!startup.website) return false;
+  if (!startup.one_liner || startup.one_liner.trim() === '') return false;
+  try {
+    const urlString = startup.website.startsWith('http') ? startup.website : `https://${startup.website}`;
+    new URL(urlString);
+    return true;
+  } catch (e) {
+    return false;
+  }
+});
+
 function getRandomStartups() {
-  const count = startupData.length;
+  const count = validStartups.length;
   if (count < 2) return [];
   const idx1 = Math.floor(Math.random() * count);
   let idx2 = Math.floor(Math.random() * count);
   while (idx1 === idx2) {
     idx2 = Math.floor(Math.random() * count);
   }
-  return [startupData[idx1], startupData[idx2]];
+  return [validStartups[idx1], validStartups[idx2]];
 }
 
 function formatBatch(batch) {
@@ -53,9 +65,11 @@ function formatBatch(batch) {
 
 function StartupLogo({ website, name }) {
   const [error, setError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     setError(false);
+    setUseFallback(false);
   }, [website]);
 
   if (!website) {
@@ -81,18 +95,28 @@ function StartupLogo({ website, name }) {
   if (error) {
     return (
       <div className="startup-image-placeholder" style={{ fontSize: '0.9rem', padding: '1rem', textAlign: 'center' }}>
-        Clearbit API Failed for: {hostname}
+        Image Failed to Load: {hostname}
       </div>
     );
   }
 
+  const imgSrc = useFallback 
+    ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`
+    : `https://logo.clearbit.com/${hostname}?size=400`;
+
   return (
     <div className="startup-image-container">
       <img 
-        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=128`} 
+        src={imgSrc} 
         alt={`${name} logo`} 
         className="startup-logo-img"
-        onError={() => setError(true)}
+        onError={() => {
+          if (!useFallback) {
+            setUseFallback(true);
+          } else {
+            setError(true);
+          }
+        }}
       />
     </div>
   );
@@ -142,9 +166,10 @@ function Home({ handleVote }) {
         {startups.map((startup, index) => (
           <React.Fragment key={startup.id}>
             <div 
-              className={`startup-card ${selectedId === startup.id ? 'selected' : ''}`}
+              className="startup-card"
               onClick={() => onSelect(startup)}
             >
+              {selectedId === startup.id && <div className="plus-one-animation">+1</div>}
               <StartupLogo website={startup.website} name={startup.name} />
               <h2 className="startup-name">
                 {startup.name} <span className="startup-batch">({formatBatch(startup.batch)})</span>
